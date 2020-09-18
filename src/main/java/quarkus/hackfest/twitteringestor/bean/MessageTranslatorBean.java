@@ -5,11 +5,14 @@ import org.apache.camel.Exchange;
 import org.apache.camel.component.infinispan.InfinispanConstants;
 import org.apache.camel.component.twitter.TwitterConstants;
 import quarkus.hackfest.datamodel.Guess;
-import twitter4j.HashtagEntity;
-import twitter4j.Status;
+import quarkus.hackfest.twitteringestor.entity.Data;
+import quarkus.hackfest.twitteringestor.entity.TweetResult;
+
 import javax.inject.Named;
 import javax.inject.Singleton;
 import java.util.logging.Logger;
+
+import static quarkus.hackfest.twitteringestor.bean.LatestTweetBean.CURRENT_GP;
 
 @Singleton
 @Named("messageTranslatorBean")
@@ -19,57 +22,47 @@ public class MessageTranslatorBean {
 
     long actualSinceId = 0;
 
+    private static String DEFAULT_SINCE_ID = "1304415889189240833";
+
     public void translateTweetToKafka(Exchange exchange){
 
-        Status status = exchange.getIn().getBody(Status.class);
-
-        String gp =  null ;
-
-        for ( HashtagEntity hashtag : status.getHashtagEntities()  ) {
-            if( hashtag.getText().contains("GP") ){
-                gp = hashtag.getText();
-                break;
-            }
-        }
+        Data status = exchange.getIn().getBody(Data.class);
 
         Guess guess = new Guess();
-        guess.setGp(gp);
-        guess.setDriver(removeHashtag(status.getText()).trim());
+        guess.setGp( (String) exchange.getIn().getHeader(CURRENT_GP));
+        guess.setDriver(removeHandler(removeHashtag(status.getText())).trim());
 
-       exchange.getIn().setBody(new Gson().toJson(guess));
+        exchange.getIn().setBody(new Gson().toJson(guess));
 
-       //records id for infinispan
+        //records id for infinispan
 
-
-        if(status.getId() > actualSinceId){
+        if(Long.parseLong(status.getId()) > actualSinceId){
             exchange.getIn().setHeader(InfinispanConstants.VALUE, status.getId());
             exchange.getIn().setHeader("updateInfinispan", "true");
-            actualSinceId = status.getId();
+            actualSinceId = Long.parseLong(status.getId());
         }else{
             exchange.getIn().setHeader("updateInfinispan", "false");
         }
 
     }
 
+    public void replyIdInfinispanReturn(Exchange exchange){
 
+        String replyId = exchange.getIn().getBody(String.class);
 
-    public void translateInfinispanReturn(Exchange exchange){
-
-        String sinceId = exchange.getIn().getBody(String.class);
-
-        if(sinceId == null){
-            sinceId = "1";
-
+        if(replyId == null){
+            replyId = "1";
+            logger.info("no previous replyId");
         }
 
-        actualSinceId = Long.parseLong(sinceId);
-        exchange.getIn().setHeader(TwitterConstants.TWITTER_SINCEID, sinceId);
+        actualSinceId = Long.parseLong(replyId);
+        exchange.getIn().setHeader(TwitterConstants.TWITTER_SINCEID, replyId);
 
     }
 
     public static String removeHashtag(String textWithHashtag){
 
-        String textWithoutHashtag = null;
+        String textWithoutHashtag = textWithHashtag;
 
         char[] letters = textWithHashtag.toCharArray();
 
@@ -83,7 +76,10 @@ public class MessageTranslatorBean {
         }
 
         return textWithoutHashtag;
+    }
 
+    public static String removeHandler(String text){
+        return text.replace("@gui_camposo", "");
     }
 
 

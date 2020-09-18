@@ -10,6 +10,7 @@ import javax.enterprise.context.Dependent;
 @Dependent
 public class TwitterIngestorRoute extends RouteBuilder {
 
+    private static final String CACHE_KEY = "cacheKey";
 
     @Override
     public void configure() throws Exception {
@@ -17,22 +18,26 @@ public class TwitterIngestorRoute extends RouteBuilder {
       from("timer:twitter-timer?period={{timer.period}}")
          .routeId("tweet-ingest")
          .log("starting twitter polling")
-         .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.GET)
-         .setHeader(InfinispanConstants.KEY).constant("last-since-id")
-         .to("{{infinispan.url}}")
-         .to("bean:messageTranslatorBean?method=translateInfinispanReturn")
-         .log("starting from id: ${body}")
-         .to("twitter-search:{{twitter.query}}?{{twitter.search.parameters}}" )
-         .split().body()
+         .to("twitter-search:{{twitter.query}}?{{twitter.search.parameters}}")
+         .to("bean:latestTweetBean")
+         .log("from ${headers.CamelTwitterKeywords} ")
+         //get sinceId
+          .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.GET)
+          .setHeader(InfinispanConstants.KEY).simple("replySinceId")
+          .to("{{infinispan.url}}")
+          .to("bean:messageTranslatorBean?method=replyIdInfinispanReturn")
+          //get replies
+          .to("bean:twitterBean")
+          .split().body()
               .to("bean:messageTranslatorBean?method=translateTweetToKafka")
-              .log("received body: ${body}")
+              .log("Tweet body: ${body}")
               .to(ExchangePattern.InOnly,"{{kafka.url}}")
               .log("message sent to kafka")
               .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.PUT)
-              .setHeader(InfinispanConstants.KEY).constant("last-since-id")
+              .setHeader(InfinispanConstants.KEY).simple("replySinceId")
               .choice().when(simple(" ${headers.updateInfinispan} == 'true' "))
-                  .to("{{infinispan.url}}")
-                  .log("infinispan updated: ${headers."+ InfinispanConstants.VALUE+"}")
+              .to("{{infinispan.url}}")
+              .log("infinispan  ${headers.cacheKey}  updated: ${headers."+ InfinispanConstants.VALUE+"}")
               .endChoice();
 
     }
