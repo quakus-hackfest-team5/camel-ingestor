@@ -19,22 +19,23 @@ public class LatestTweetBean {
     public void latestTweet(Exchange exchange){
 
         List<Status> body = exchange.getIn().getBody(List.class);
-
         Status status = body.get(0);
-
         String query = "conversation_id:"+ status.getId();
-        String gp =  null ;
 
+        exchange.getIn().setHeader(TwitterConstants.TWITTER_KEYWORDS, query);
+        exchange.getIn().setHeader(CURRENT_GP, getGPname(status));
+
+    }
+
+    public static String getGPname(Status status){
+        String gp =  null ;
         for ( HashtagEntity hashtag : status.getHashtagEntities()  ) {
-            if( hashtag.getText().contains("GP") ){
+            if( hashtag.getText().contains("GrandPrix") ){
                 gp = hashtag.getText();
                 break;
             }
         }
-
-        exchange.getIn().setHeader(TwitterConstants.TWITTER_KEYWORDS, query);
-        exchange.getIn().setHeader(CURRENT_GP, gp);
-
+        return gp;
     }
 
 }
