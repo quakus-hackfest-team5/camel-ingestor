@@ -4,7 +4,6 @@ import org.apache.camel.Exchange;
 import org.apache.camel.component.twitter.TwitterConstants;
 import twitter4j.HashtagEntity;
 import twitter4j.Status;
-
 import javax.inject.Named;
 import javax.inject.Singleton;
 import java.util.List;
@@ -18,12 +17,15 @@ public class LatestTweetBean {
 
     public void latestTweet(Exchange exchange){
 
-        List<Status> body = exchange.getIn().getBody(List.class);
-        Status status = body.get(0);
-        String query = "conversation_id:"+ status.getId();
+        List<Status> list = exchange.getIn().getBody(List.class);
 
-        exchange.getIn().setHeader(TwitterConstants.TWITTER_KEYWORDS, query);
-        exchange.getIn().setHeader(CURRENT_GP, getGPname(status));
+        if(list != null && !list.isEmpty()){
+            Status status = list.get(0);
+            String query = "conversation_id:"+ status.getId();
+
+            exchange.getIn().setHeader(TwitterConstants.TWITTER_KEYWORDS, query);
+            exchange.getIn().setHeader(CURRENT_GP, getGPname(status));
+        }
 
     }
 

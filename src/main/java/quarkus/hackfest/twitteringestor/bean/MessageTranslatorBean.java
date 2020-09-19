@@ -6,8 +6,6 @@ import org.apache.camel.component.infinispan.InfinispanConstants;
 import org.apache.camel.component.twitter.TwitterConstants;
 import quarkus.hackfest.datamodel.Guess;
 import quarkus.hackfest.twitteringestor.entity.Data;
-import quarkus.hackfest.twitteringestor.entity.TweetResult;
-
 import javax.inject.Named;
 import javax.inject.Singleton;
 import java.util.logging.Logger;

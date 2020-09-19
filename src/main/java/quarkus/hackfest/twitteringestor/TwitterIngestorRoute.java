@@ -1,10 +1,8 @@
 package quarkus.hackfest.twitteringestor;
 
-import org.apache.camel.ExchangePattern;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.infinispan.InfinispanConstants;
 import org.apache.camel.component.infinispan.InfinispanOperation;
-
 import javax.enterprise.context.Dependent;
 
 @Dependent
@@ -20,7 +18,7 @@ public class TwitterIngestorRoute extends RouteBuilder {
          .log("starting twitter polling")
          .to("twitter-search:{{twitter.query}}?{{twitter.search.parameters}}")
          .to("bean:latestTweetBean")
-         .log("from ${headers.CamelTwitterKeywords} ")
+         .log("Main Tweet: ${headers.CamelTwitterKeywords} ")
          //get sinceId
           .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.GET)
           .setHeader(InfinispanConstants.KEY).simple("replySinceId")
@@ -31,7 +29,7 @@ public class TwitterIngestorRoute extends RouteBuilder {
           .split().body()
               .to("bean:messageTranslatorBean?method=translateTweetToKafka")
               .log("Tweet body: ${body}")
-              .to(ExchangePattern.InOnly,"{{kafka.url}}")
+              //.to(ExchangePattern.InOnly,"{{kafka.url}}")
               .log("message sent to kafka")
               .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.PUT)
               .setHeader(InfinispanConstants.KEY).simple("replySinceId")

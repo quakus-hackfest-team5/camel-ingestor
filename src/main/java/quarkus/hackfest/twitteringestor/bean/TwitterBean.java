@@ -46,13 +46,16 @@ public class TwitterBean {
 
         String query = (String) exchange.getIn().getHeader(TwitterConstants.TWITTER_KEYWORDS) ;
         String sinceId = (String) exchange.getIn().getHeader(TwitterConstants.TWITTER_SINCEID);
-        TweetResult result;
+        TweetResult result = null;
 
-        if(sinceId.equals("1")){
-            result= twitter.getTweets(query, tokenBearer);
-        }else{
-            result= twitter.getTweets(query, sinceId, tokenBearer);
+        if(query != null){
+            if(sinceId.equals("1")){
+                result= twitter.getTweets(query, tokenBearer);
+            }else{
+                result= twitter.getTweets(query, sinceId, tokenBearer);
+            }
         }
+
 
         if(result != null && result.getData() != null){
             logger.info(result.getData().size() + " results found");
